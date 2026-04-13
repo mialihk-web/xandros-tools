@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Xandros — Whisky Tools</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #111;
+      color: #e8dfc8;
+      font-family: 'Georgia', serif;
+      min-height: 100vh;
+      padding: 40px 24px;
+    }
+
+    /* ── HEADER ── */
+    header {
+      text-align: center;
+      margin-bottom: 36px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid #2a2010;
+    }
+    header h1 {
+      font-size: 26px;
+      letter-spacing: 8px;
+      color: #c9a84c;
+      text-transform: uppercase;
+    }
+    header p {
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: #5a4a30;
+      text-transform: uppercase;
+      margin-top: 6px;
+    }
+
+    /* ── TWO COLUMN LAYOUT ── */
+    .workspace {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 32px;
+      max-width: 1300px;
+      margin: 0 auto;
+      align-items: start;
+    }
+
+    @media (max-width: 860px) {
+      .workspace { grid-template-columns: 1fr; }
+      .calc-mode-toggle { flex-wrap: wrap; }
+      .calc-mode-btn { flex: 1 1 45%; font-size: 11px; padding: 10px 4px; min-height: 44px; }
+    }
+
+    /* ── PANEL ── */
+    .panel-title {
+      font-size: 10px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #c9a84c;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #2a2010;
+    }
+
+    /* ── SHARED ELEMENTS ── */
+    .field-label {
+      display: block;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #5a4a30;
+      margin-bottom: 7px;
+    }
+
+    .card {
+      background: #1a1a1a;
+      border: 1px solid #2a2010;
+      border-radius: 6px;
+      padding: 16px;
+      margin-bottom: 10px;
+    }
+
+    /* ── LEFT: LISTING EDITOR ── */
+    textarea#whiskyInput {
+      width: 100%;
+      background: #1a1a1a;
+      border: 1px solid #2a2010;
+      border-radius: 6px;
+      color: #e8dfc8;
+      font-family: 'Georgia', serif;
+      font-size: 15px;
+      padding: 14px;
+      resize: vertical;
+      min-height: 80px;
+      outline: none;
+      transition: border-color 0.2s;
+      margin-bottom: 10px;
+    }
+    textarea#whiskyInput:focus { border-color: #c9a84c; }
+    textarea#whiskyInput::placeholder { color: #3a2e1e; }
+
+    #generateBtn {
+      width: 100%;
+      background: #c9a84c;
+      color: #111;
+      border: none;
+      border-radius: 4px;
+      padding: 13px;
+      font-family: 'Georgia', serif;
+      font-size: 12px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    #generateBtn:hover { background: #dbbe6a; }
+    #generateBtn:disabled { background: #3a2e1e; color: #5a4a30; cursor: not-allowed; }
+
+    .spinner {
+      display: none;
+      text-align: center;
+      color: #5a4a30;
+      font-size: 12px;
+      letter-spacing: 2px;
+      padding: 16px 0;
+    }
+
+    .output-block {
+      background: #1a1a1a;
+      border: 1px solid #2a2010;
+      border-radius: 6px;
+      padding: 16px;
+      margin-top: 10px;
+    }
+    .output-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .output-header span {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #c9a84c;
+    }
+    .copy-btn {
+      background: transparent;
+      border: 1px solid #2a2010;
+      color: #5a4a30;
+      border-radius: 3px;
+      padding: 4px 10px;
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .copy-btn:hover { border-color: #c9a84c; color: #c9a84c; }
+    .copy-btn.copied { border-color: #4a7a4a; color: #4a7a4a; }
+
+    #titleOutput { font-size: 15px; line-height: 1.5; color: #e8dfc8; }
+    #descOutput {
+      font-size: 13px;
+      line-height: 1.85;
+      color: #b8a888;
+      white-space: pre-wrap;
+    }
+
+    .error-msg {
+      display: none;
+      background: #2a1a1a;
+      border: 1px solid #5a2a2a;
+      border-radius: 4px;
+      color: #c87a7a;
+      font-size: 12px;
+      padding: 10px 14px;
+      margin-top: 10px;
+    }
+
+    .settings-row {
+      margin-top: 16px;
+      text-align: right;
+    }
+    .settings-row a {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #3a2e1e;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .settings-row a:hover { color: #5a4a30; }
+
+    .settings-panel {
+      display: none;
+      margin-top: 10px;
+      background: #1a1a1a;
+      border: 1px solid #2a2010;
+      border-radius: 4px;
+      padding: 14px;
+    }
+    .settings-panel input {
+      width: 100%;
+      background: #111;
+      border: 1px solid #2a2010;
+      border-radius: 3px;
+      color: #e8dfc8;
+      font-size: 12px;
+      padding: 9px 12px;
+      outline: none;
+      font-family: monospace;
+      margin-top: 6px;
+    }
+    .settings-panel input:focus { border-color: #c9a84c; }
+
+    /* ── RIGHT: PRICING CALCULATOR ── */
+    .calc-mode-toggle {
+      display: flex;
+      background: #1a1a1a;
+      border: 1px solid #2a2010;
+      border-radius: 6px;
+      padding: 3px;
+      margin-bottom: 10px;
+      gap: 3px;
+    }
+    .calc-mode-btn {
+      flex: 1;
+      background: none;
+      border: none;
+      border-radius: 4px;
+      color: #5a4a30;
+      font-size: 12px;
+      font-family: 'Georgia', serif;
+      padding: 9px 0;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .calc-mode-btn.active {
+      background: #2a2010;
+      color: #c9a84c;
+      border: 1px solid #3a2e1e;
+    }
+
+    .input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #111;
+      border: 1px solid #2a2010;
+      border-radius: 5px;
+      padding: 0 12px;
+      transition: border-color 0.2s;
+    }
+    .input-wrap:focus-within { border-color: #c9a84c; }
+    .input-wrap .prefix {
+      font-family: monospace;
+      font-size: 13px;
+      color: #5a4a30;
+    }
+    .input-wrap input {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      font-family: monospace;
+      font-size: 22px;
+      font-weight: 500;
+      color: #e8dfc8;
+      padding: 12px 0;
+      width: 100%;
+    }
+    .input-wrap input::placeholder { color: #3a2e1e; }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    .small-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #111;
+      border: 1px solid #2a2010;
+      border-radius: 5px;
+      padding: 0 10px;
+      transition: border-color 0.2s;
+    }
+    .small-input-wrap:focus-within { border-color: #c9a84c; }
+    .small-input-wrap input {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      font-family: monospace;
+      font-size: 18px;
+      color: #e8dfc8;
+      padding: 10px 0;
+      width: 0;
+    }
+    .small-input-wrap .suffix { font-size: 12px; color: #5a4a30; font-family: monospace; }
+
+    .rate-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 8px;
+      gap: 8px;
+    }
+    .rate-manual-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #111;
+      border: 1px solid #2a2010;
+      border-radius: 5px;
+      padding: 0 10px;
+      transition: border-color 0.2s;
+      flex: 1;
+    }
+    .rate-manual-wrap:focus-within { border-color: #c9a84c; }
+    .rate-manual-wrap input {
+      background: none;
+      border: none;
+      outline: none;
+      font-family: monospace;
+      font-size: 14px;
+      color: #e8dfc8;
+      padding: 8px 0;
+      width: 80px;
+    }
+    .rate-manual-wrap .suffix { font-size: 11px; color: #5a4a30; }
+
+    .refresh-btn {
+      background: none;
+      border: 1px solid #2a2010;
+      border-radius: 5px;
+      color: #5a4a30;
+      font-size: 11px;
+      font-family: 'Georgia', serif;
+      padding: 7px 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .refresh-btn:hover { border-color: #c9a84c; color: #c9a84c; }
+    .refresh-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .rate-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-family: monospace;
+      color: #c9a84c;
+      margin-bottom: 16px;
+    }
+    .rate-badge .dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: #c9a84c;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+    .rate-badge.loading { color: #5a4a30; }
+    .rate-badge.loading .dot { background: #5a4a30; }
+    .rate-badge.error { color: #c87a7a; }
+    .rate-badge.error .dot { background: #c87a7a; animation: none; }
+    .rate-badge.live .dot { background: #4caf7a; animation: pulse 2.5s infinite; }
+
+    .calc-placeholder {
+      text-align: center;
+      padding: 24px 0;
+      color: #3a2e1e;
+      font-size: 13px;
+    }
+
+    .breakdown { display: flex; flex-direction: column; gap: 9px; }
+    .breakdown-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+    }
+    .breakdown-row .lbl { color: #7a6a50; }
+    .breakdown-row .val { font-family: monospace; color: #e8dfc8; }
+    .breakdown-row .val.muted { color: #5a4a30; }
+
+    .divider { height: 1px; background: #2a2010; margin: 8px 0; }
+
+    .result-card {
+      background: #2a1e08;
+      border: 1px solid #4a3010;
+      border-radius: 6px;
+      padding: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+    }
+    .result-card .rl { font-size: 11px; color: #c9a84c; opacity: 0.7; letter-spacing: 1px; }
+    .result-card .rv {
+      font-family: monospace;
+      font-size: 28px;
+      font-weight: 500;
+      color: #c9a84c;
+    }
+
+    .reverse-result-card {
+      background: #1a1a1a;
+      border: 1px solid #2a2010;
+      border-radius: 6px;
+      padding: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+    }
+    .reverse-result-card .rl { font-size: 11px; color: #7a6a50; letter-spacing: 1px; }
+    .reverse-result-card .rv {
+      font-family: monospace;
+      font-size: 28px;
+      color: #e8dfc8;
+    }
+
+    .calc-footer {
+      margin-top: 16px;
+      font-size: 10px;
+      color: #3a2e1e;
+      letter-spacing: 1px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Xandros</h1>
+    <p>Whisky Tools</p>
+  </header>
+
+  <div class="workspace">
+
+    <!-- ══ LEFT: LISTING EDITOR ══ -->
+    <div class="left-panel">
+      <div class="panel-title">Listing Editor — Catawiki</div>
+
+      <label class="field-label">Whisky Details</label>
+      <textarea id="whiskyInput" placeholder="e.g. The Yamazaki 25 Year Old Limited Edition 43.0 abv NV (1 BT70)"></textarea>
+      <button id="generateBtn" onclick="generate()">Generate Listing</button>
+      <div class="error-msg" id="errorMsg"></div>
+      <div class="spinner" id="spinner">Generating…</div>
+
+      <div id="outputSection" style="display:none">
+        <div class="output-block">
+          <div class="output-header">
+            <span>Title</span>
+            <button class="copy-btn" id="copyTitleBtn" onclick="copyText('titleOutput','copyTitleBtn')">Copy</button>
+          </div>
+          <div id="titleOutput"></div>
+        </div>
+        <div class="output-block">
+          <div class="output-header">
+            <span>Description</span>
+            <button class="copy-btn" id="copyDescBtn" onclick="copyText('descOutput','copyDescBtn')">Copy</button>
+          </div>
+          <div id="descOutput"></div>
+        </div>
+      </div>
+
+      <div class="settings-row">
+        <a onclick="toggleSettings()">⚙ API Settings</a>
+      </div>
+      <div class="settings-panel" id="settingsPanel">
+        <label class="field-label">Gemini API Key</label>
+        <input type="password" id="apiKeyInput" placeholder="Paste your Gemini API key here" />
+      </div>
+    </div>
+
+    <!-- ══ RIGHT: PRICING CALCULATOR ══ -->
+    <div class="right-panel">
+      <div class="panel-title">Pricing Calculator — HKD ⟶ EUR</div>
+
+      <div class="rate-badge loading" id="rateBadge">
+        <span class="dot"></span>
+        <span id="rateText">Fetching live rate…</span>
+      </div>
+
+      <div class="calc-mode-toggle">
+        <button class="calc-mode-btn active" id="modeHKD" onclick="setMode('hkd')">HK$ Cost → EUR Price</button>
+        <button class="calc-mode-btn" id="modeEUR" onclick="setMode('eur')">€ Price → HK$ Cost</button>
+        <button class="calc-mode-btn" id="modePROFIT" onclick="setMode('profit')">€ + HK$ → Profit</button>
+      </div>
+
+      <div id="hkdInputSection">
+        <div class="card">
+          <label class="field-label">Inventory Cost</label>
+          <div class="input-wrap">
+            <span class="prefix">HK$</span>
+            <input type="number" id="cost" placeholder="0.00" min="0" step="0.01" oninput="calculate()" />
+          </div>
+        </div>
+      </div>
+
+      <div id="eurInputSection" style="display:none">
+        <div class="card">
+          <label class="field-label">Selling Price (EUR)</label>
+          <div class="input-wrap">
+            <span class="prefix">€</span>
+            <input type="number" id="eurPrice" placeholder="0.00" min="0" step="0.01" oninput="calculateReverse()" />
+          </div>
+        </div>
+      </div>
+
+      <div id="profitInputSection" style="display:none">
+        <div class="card">
+          <label class="field-label">Actual Selling Price (EUR)</label>
+          <div class="input-wrap">
+            <span class="prefix">€</span>
+            <input type="number" id="profitEurPrice" placeholder="0.00" min="0" step="0.01" oninput="calculateProfit()" />
+          </div>
+        </div>
+        <div class="card" style="margin-top:10px">
+          <label class="field-label">Inventory Cost (HKD)</label>
+          <div class="input-wrap">
+            <span class="prefix">HK$</span>
+            <input type="number" id="profitHkdCost" placeholder="0.00" min="0" step="0.01" oninput="calculateProfit()" />
+          </div>
+        </div>
+      </div>
+
+      <div class="two-col" id="profitMarginRow">
+        <div class="card">
+          <label class="field-label">Profit Margin</label>
+          <div class="small-input-wrap">
+            <input type="number" id="profit" value="30" min="0" max="200" step="0.1" title="Profit margin %" placeholder="0" oninput="recalc()" />
+            <span class="suffix">%</span>
+          </div>
+        </div>
+        <div class="card">
+          <label class="field-label">Handling Fee</label>
+          <div class="small-input-wrap">
+            <input type="number" id="handling" value="12.5" min="0" step="0.1" title="Handling fee %" placeholder="12.5" oninput="recalc()" />
+            <span class="suffix">%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <label class="field-label">Exchange Rate (HKD → EUR)</label>
+        <div class="rate-row">
+          <div class="rate-manual-wrap">
+            <input type="number" id="rateInput" value="0.1104" min="0.0001" step="0.0001" title="Exchange rate EUR per HKD" placeholder="0.1104" oninput="recalc()" />
+            <span class="suffix">EUR / HKD</span>
+          </div>
+          <button type="button" class="refresh-btn" id="refreshBtn" onclick="fetchRate()">↻ Refresh</button>
+        </div>
+      </div>
+
+      <div class="card" id="resultCard">
+        <div class="calc-placeholder">Enter a value above to see the breakdown.</div>
+      </div>
+
+      <div class="result-card" id="finalCard" style="display:none">
+        <div class="rl">Final Selling Price</div>
+        <div class="rv" id="finalEur">€—</div>
+      </div>
+
+      <div class="reverse-result-card" id="reverseCard" style="display:none">
+        <div class="rl">Original Inventory Cost (HKD)</div>
+        <div class="rv" id="finalHkd">HK$—</div>
+      </div>
+
+      <div class="reverse-result-card" id="profitCard" style="display:none">
+        <div class="rl" id="profitCardLabel">Actual Profit (HKD)</div>
+        <div class="rv" id="finalProfit">HK$—</div>
+      </div>
+
+      <div class="calc-footer" id="fetchedOn">Rate auto-fetched on load</div>
+    </div>
+
+  </div><!-- end workspace -->
+
+  <script>
+    /* ══════════════════════════════════════
+       LISTING EDITOR
+    ══════════════════════════════════════ */
+    const DEFAULT_GEMINI_KEY = 'AIzaSyCIGE2Q1Buthiuse3i288JveZ5J_DvJucc';
+
+    const SYSTEM_PROMPT = `You are a whisky listing specialist for Xandros, a professional UK whisky consignment agency.
+
+When given whisky details, output ONLY the following. No extra text, no questions, no commentary.
+
+TITLE:
+[Distillery] [Age/Vintage] [Expression] – [Whisky Style] ([Volume])
+
+DESCRIPTION:
+Distillery: [name]
+Age: [X Years Old or NAS]
+ABV: [X]%
+Volume: [Xcl]
+Vintage: [year or Non-Vintage]
+Condition: Sealed, unopened
+
+[Paragraph 1: 3-4 sentences on the distillery's history, location, and reputation among collectors]
+
+[Paragraph 2: 3-4 sentences on this specific expression — its rarity, cask type, production method, and why it matters to collectors]
+
+Tasting Notes:
+Colour: [description]
+Nose: [description]
+Palate: [description]
+Finish: [description]
+
+RULES:
+- Output ONLY the title and description — nothing before or after
+- Plain text only — no tables, no bullet points, no markdown, no headers
+- No citations, no website names, no source references of any kind
+- Never ask questions
+- Tone: professional, high-end, collector-focused English
+- If details are missing, use your knowledge to fill in accurately`;
+
+    window.onload = () => {
+      const saved = localStorage.getItem('xandros_gemini_key');
+      if (saved) document.getElementById('apiKeyInput').value = saved;
+      fetchRate();
+    };
+
+    function getGeminiKey() {
+      const v = document.getElementById('apiKeyInput').value.trim();
+      if (v) { localStorage.setItem('xandros_gemini_key', v); return v; }
+      const saved = localStorage.getItem('xandros_gemini_key');
+      if (saved) return saved;
+      throw new Error('No API key set. Please enter your Gemini API key in ⚙ API Settings.');
+    }
+
+    function toggleSettings() {
+      const p = document.getElementById('settingsPanel');
+      p.style.display = p.style.display === 'block' ? 'none' : 'block';
+    }
+
+    async function generate() {
+      const input = document.getElementById('whiskyInput').value.trim();
+      if (!input) return;
+
+      const apiKey = getGeminiKey();
+      const btn = document.getElementById('generateBtn');
+      const spinner = document.getElementById('spinner');
+      const outputSection = document.getElementById('outputSection');
+      const errorMsg = document.getElementById('errorMsg');
+
+      btn.disabled = true;
+      spinner.style.display = 'block';
+      outputSection.style.display = 'none';
+      errorMsg.style.display = 'none';
+
+      try {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: SYSTEM_PROMPT + '\n\nGenerate a listing for: ' + input }] }],
+              generationConfig: { temperature: 0.7 }
+            })
+          }
+        );
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error?.message || 'API error');
+        }
+
+        const data = await res.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        parseAndDisplay(text);
+
+      } catch (err) {
+        errorMsg.textContent = 'Error: ' + err.message;
+        errorMsg.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        spinner.style.display = 'none';
+      }
+    }
+
+    function parseAndDisplay(text) {
+      const titleMatch = text.match(/TITLE:\s*\n([\s\S]*?)(?=\n\nDESCRIPTION:|$)/i);
+      const descMatch  = text.match(/DESCRIPTION:\s*\n([\s\S]*)/i);
+
+      const title = titleMatch ? titleMatch[1].trim() : text.split('\n')[0].trim();
+      const desc  = descMatch  ? descMatch[1].trim()  : text.replace(title, '').trim();
+
+      document.getElementById('titleOutput').textContent = title;
+      document.getElementById('descOutput').textContent  = desc;
+      document.getElementById('outputSection').style.display = 'block';
+
+      ['copyTitleBtn','copyDescBtn'].forEach(id => {
+        document.getElementById(id).textContent = 'Copy';
+        document.getElementById(id).classList.remove('copied');
+      });
+    }
+
+    function copyText(elId, btnId) {
+      navigator.clipboard.writeText(document.getElementById(elId).textContent).then(() => {
+        const btn = document.getElementById(btnId);
+        btn.textContent = 'Copied ✓';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    }
+
+    document.addEventListener('keydown', e => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') generate();
+    });
+
+    /* ══════════════════════════════════════
+       PRICING CALCULATOR
+    ══════════════════════════════════════ */
+    let currentRate = 0.1104;
+    let calcMode = 'hkd';
+
+    function setMode(m) {
+      calcMode = m;
+      document.getElementById('modeHKD').className    = 'calc-mode-btn' + (m === 'hkd'    ? ' active' : '');
+      document.getElementById('modeEUR').className    = 'calc-mode-btn' + (m === 'eur'    ? ' active' : '');
+      document.getElementById('modePROFIT').className = 'calc-mode-btn' + (m === 'profit' ? ' active' : '');
+
+      document.getElementById('hkdInputSection').style.display    = m === 'hkd'    ? 'block' : 'none';
+      document.getElementById('eurInputSection').style.display     = m === 'eur'    ? 'block' : 'none';
+      document.getElementById('profitInputSection').style.display  = m === 'profit' ? 'block' : 'none';
+
+      // hide profit margin row in Mode 3 (profit is the output, not an input)
+      document.getElementById('profitMarginRow').style.display = m === 'profit' ? 'none' : '';
+
+      document.getElementById('resultCard').innerHTML = '<div class="calc-placeholder">Enter a value above to see the breakdown.</div>';
+      document.getElementById('finalCard').style.display   = 'none';
+      document.getElementById('reverseCard').style.display = 'none';
+      document.getElementById('profitCard').style.display  = 'none';
+    }
+
+    function recalc() {
+      if (calcMode === 'eur') calculateReverse();
+      else if (calcMode === 'profit') calculateProfit();
+      else calculate();
+    }
+
+    async function fetchRate() {
+      const badge = document.getElementById('rateBadge');
+      const rateText = document.getElementById('rateText');
+      const btn = document.getElementById('refreshBtn');
+
+      badge.className = 'rate-badge loading';
+      rateText.textContent = 'Fetching live rate…';
+      btn.disabled = true;
+
+      const apis = [
+        async () => {
+          const res = await fetch('https://open.er-api.com/v6/latest/HKD');
+          if (!res.ok) throw new Error();
+          const data = await res.json();
+          const rate = data.rates?.EUR;
+          if (!rate) throw new Error();
+          return rate;
+        },
+        async () => {
+          const res = await fetch('https://api.exchangerate-api.com/v4/latest/HKD');
+          if (!res.ok) throw new Error();
+          const data = await res.json();
+          const rate = data.rates?.EUR;
+          if (!rate) throw new Error();
+          return rate;
+        },
+        async () => {
+          const res = await fetch('https://api.frankfurter.app/latest?from=HKD&to=EUR');
+          if (!res.ok) throw new Error();
+          const data = await res.json();
+          const rate = data.rates?.EUR;
+          if (!rate) throw new Error();
+          return rate;
+        }
+      ];
+
+      let rate = null;
+      for (const api of apis) {
+        try { rate = await api(); break; } catch (e) { /* try next */ }
+      }
+
+      if (rate) {
+        currentRate = rate;
+        document.getElementById('rateInput').value = rate.toFixed(4);
+        badge.className = 'rate-badge live';
+        rateText.textContent = `1 HKD = ${rate.toFixed(4)} EUR · Live`;
+        document.getElementById('fetchedOn').textContent =
+          'Rate fetched: ' + new Date().toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+        if (calcMode === 'hkd') calculate(); else if (calcMode === 'eur') calculateReverse(); else calculateProfit();
+      } else {
+        badge.className = 'rate-badge error';
+        rateText.textContent = 'Auto-fetch failed — please enter rate manually below';
+        document.getElementById('rateInput').style.borderColor = '#c9a84c';
+        document.getElementById('rateInput').focus();
+      }
+      btn.disabled = false;
+    }
+
+    function calculate() {
+      const cost       = parseFloat(document.getElementById('cost').value);
+      const _p         = parseFloat(document.getElementById('profit').value);
+      const _h         = parseFloat(document.getElementById('handling').value);
+      const profitPct  = isNaN(_p) ? 0 : _p;
+      const handlingPct= isNaN(_h) ? 0 : _h;
+      const rate       = parseFloat(document.getElementById('rateInput').value) || currentRate;
+
+      const finalCard  = document.getElementById('finalCard');
+      document.getElementById('reverseCard').style.display = 'none';
+
+      if (isNaN(cost) || cost <= 0) {
+        document.getElementById('resultCard').innerHTML = '<div class="calc-placeholder">Enter an inventory cost above.</div>';
+        finalCard.style.display = 'none';
+        return;
+      }
+
+      const profitAmt   = cost * (profitPct / 100);
+      const sub1        = cost + profitAmt;
+      const handlingAmt = sub1 * (handlingPct / 100);
+      const totalHKD    = sub1 + handlingAmt;
+      const totalEUR    = totalHKD * rate;
+
+      document.getElementById('resultCard').innerHTML = `
+        <label class="field-label">Breakdown</label>
+        <div class="breakdown">
+          <div class="breakdown-row"><span class="lbl">Inventory cost</span><span class="val">HK$${cost.toFixed(2)}</span></div>
+          <div class="breakdown-row"><span class="lbl">+ Profit (${profitPct}%)</span><span class="val muted">+ HK$${profitAmt.toFixed(2)}</span></div>
+          <div class="breakdown-row"><span class="lbl">Subtotal</span><span class="val">HK$${sub1.toFixed(2)}</span></div>
+          <div class="breakdown-row"><span class="lbl">+ Handling (${handlingPct}%)</span><span class="val muted">+ HK$${handlingAmt.toFixed(2)}</span></div>
+          <div class="divider"></div>
+          <div class="breakdown-row"><span class="lbl">Total (HKD)</span><span class="val">HK$${totalHKD.toFixed(2)}</span></div>
+          <div class="breakdown-row"><span class="lbl">Rate applied</span><span class="val muted">× ${rate.toFixed(4)}</span></div>
+        </div>`;
+
+      document.getElementById('finalEur').textContent = '€' + totalEUR.toFixed(2);
+      finalCard.style.display = 'flex';
+    }
+
+    function calculateReverse() {
+      const eurPrice    = parseFloat(document.getElementById('eurPrice').value);
+      const _p2         = parseFloat(document.getElementById('profit').value);
+      const profitPct   = isNaN(_p2) ? 0 : _p2;
+      const _h2         = parseFloat(document.getElementById('handling').value);
+      const handlingPct = isNaN(_h2) ? 0 : _h2;
+      const rate        = parseFloat(document.getElementById('rateInput').value) || currentRate;
+
+      const reverseCard = document.getElementById('reverseCard');
+      document.getElementById('finalCard').style.display = 'none';
+
+      if (isNaN(eurPrice) || eurPrice <= 0) {
+        document.getElementById('resultCard').innerHTML = '<div class="calc-placeholder">Enter a selling price in EUR.</div>';
+        reverseCard.style.display = 'none';
+        return;
+      }
+
+      const totalHKD    = eurPrice / rate;
+      const sub1        = totalHKD / (1 + handlingPct / 100);
+      const cost        = sub1 / (1 + profitPct / 100);
+      const profitAmt   = sub1 - cost;
+      const handlingAmt = totalHKD - sub1;
+
+      document.getElementById('resultCard').innerHTML = `
+        <label class="field-label">Breakdown (Reverse)</label>
+        <div class="breakdown">
+          <div class="breakdown-row"><span class="lbl">Selling price (EUR)</span><span class="val">€${eurPrice.toFixed(2)}</span></div>
+          <div class="breakdown-row"><span class="lbl">÷ Rate (${rate.toFixed(4)})</span><span class="val muted">= HK$${totalHKD.toFixed(2)}</span></div>
+          <div class="breakdown-row"><span class="lbl">− Handling (${handlingPct}%)</span><span class="val muted">− HK$${handlingAmt.toFixed(2)}</span></div>
+          <div class="breakdown-row"><span class="lbl">Before profit</span><span class="val">HK$${sub1.toFixed(2)}</span></div>
+          <div class="breakdown-row"><span class="lbl">− Profit (${profitPct}%)</span><span class="val muted">− HK$${profitAmt.toFixed(2)}</span></div>
+          <div class="divider"></div>
+          <div class="breakdown-row"><span class="lbl">Your profit</span><span class="val" style="color:#c9a84c">HK$${profitAmt.toFixed(2)}</span></div>
+        </div>`;
+
+      document.getElementById('finalHkd').textContent = 'HK$' + cost.toFixed(2);
+      reverseCard.style.display = 'flex';
+    }
+
+    function calculateProfit() {
+      const eurPrice    = parseFloat(document.getElementById('profitEurPrice').value);
+      const hkdCost     = parseFloat(document.getElementById('profitHkdCost').value);
+      const rate        = parseFloat(document.getElementById('rateInput').value) || currentRate;
+
+      const profitCard  = document.getElementById('profitCard');
+      document.getElementById('finalCard').style.display   = 'none';
+      document.getElementById('reverseCard').style.display = 'none';
+
+      if (isNaN(eurPrice) || eurPrice <= 0 || isNaN(hkdCost) || hkdCost <= 0) {
+        document.getElementById('resultCard').innerHTML = '<div class="calc-placeholder">Enter both EUR price and HKD cost above.</div>';
+        profitCard.style.display = 'none';
+        return;
+      }
+
+      const hkdGross      = eurPrice / rate;
+      const profitHkd     = hkdGross - hkdCost;
+      const profitPct     = (profitHkd / hkdCost) * 100;
+      const isLoss        = profitHkd < 0;
+
+      document.getElementById('resultCard').innerHTML = `
+        <label class="field-label">Breakdown</label>
+        <div class="breakdown">
+          <div class="breakdown-row"><span class="lbl">Selling price (EUR)</span><span class="val">€${eurPrice.toFixed(2)}</span></div>
+          <div class="breakdown-row"><span class="lbl">÷ Rate (${rate.toFixed(4)})</span><span class="val muted">= HK$${hkdGross.toFixed(2)}</span></div>
+          <div class="breakdown-row"><span class="lbl">− Inventory cost</span><span class="val muted">− HK$${hkdCost.toFixed(2)}</span></div>
+          <div class="divider"></div>
+          <div class="breakdown-row"><span class="lbl">${isLoss ? 'Loss' : 'Profit'}</span><span class="val" style="color:${isLoss ? '#e05c5c' : '#4caf7a'}">${isLoss ? '−' : '+'}HK$${Math.abs(profitHkd).toFixed(2)} (${profitPct.toFixed(1)}%)</span></div>
+        </div>`;
+
+      document.getElementById('profitCardLabel').textContent = isLoss ? 'Net Loss (HKD)' : 'Actual Profit (HKD)';
+      document.getElementById('finalProfit').textContent = (isLoss ? '−' : '+') + 'HK$' + Math.abs(profitHkd).toFixed(2);
+      document.getElementById('finalProfit').style.color = isLoss ? '#e05c5c' : '#4caf7a';
+      profitCard.style.display = 'flex';
+    }
+  </script>
+</body>
+</html>
