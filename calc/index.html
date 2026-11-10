@@ -121,6 +121,10 @@
   .checks { margin-top: 12px; display: flex; flex-direction: column; gap: 4px; }
   .check { display: flex; align-items: center; gap: 10px; min-height: 40px; font-size: 15px; cursor: pointer; }
   .check input { width: 22px; height: 22px; accent-color: var(--gold); flex: none; }
+  .check-card { flex-wrap: wrap; }
+  .check-card .remind-text { display: none; }
+  .check-card.remind { color: var(--bad); font-weight: 600; }
+  .check-card.remind .remind-text { display: block; flex-basis: 100%; padding-left: 32px; margin-top: -8px; font-size: 13px; font-weight: 500; }
 
   .ship-row { display: flex; gap: 8px; }
   .ship-row .money { flex: 1 1 auto; min-width: 0; }
@@ -170,6 +174,7 @@
 
   /* 匯率（頁底，細隻） */
   .rates-panel { margin-top: 18px; padding: 12px 14px; font-size: 14px; }
+  .more-panel { padding: 6px 14px; }
   .rates-title { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; letter-spacing: 1px; }
   .rates-panel .rate-field .lbl { display: none; }
   .rates-panel .rate-input { font-size: 14px; }
@@ -192,8 +197,11 @@
   body[data-profitunit="pct"] .profit-input input { padding-right: 34px; }
   body[data-profitunit="hkd"] .profit-input input { padding-left: 46px; }
   .presets { margin-top: 8px; flex-wrap: nowrap; }
+  #profitPresets { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+  #profitPresets button { font-size: 13px; min-height: 38px; padding: 2px 0; white-space: nowrap; letter-spacing: -0.2px; }
+  @media (max-width: 360px) { #profitPresets button { font-size: 12px; } }
   .presets button { min-height: 42px; padding: 4px 2px; }
-  body[data-profitunit="hkd"] .presets { display: none; }
+  body[data-profitunit="hkd"] #profitPresets, body[data-profitunit="pct"] #profitPresetsHkd { display: none; }
 
   /* 要填嘅格仔：淺黃底、粗邊、粗體（匯率格自動填，唔加） */
   .shared input[type="text"], .card input[type="text"] {
@@ -275,33 +283,21 @@
           <div class="profit-input"><i class="pre">HK$</i><input type="text" id="profit" inputmode="decimal" autocomplete="off" placeholder="0" aria-label="目標利潤"><i class="suf">%</i></div>
         </div>
         <div class="seg presets" id="profitPresets">
+          <button type="button" data-v="-10">−10%</button>
+          <button type="button" data-v="-5">−5%</button>
+          <button type="button" data-v="0">0%</button>
           <button type="button" data-v="5">5%</button>
           <button type="button" data-v="10">10%</button>
           <button type="button" data-v="20">20%</button>
           <button type="button" data-v="30">30%</button>
         </div>
+        <div class="seg presets" id="profitPresetsHkd">
+          <button type="button" data-v="0">HK$0</button>
+          <button type="button" data-v="500">HK$500</button>
+          <button type="button" data-v="1000">HK$1,000</button>
+        </div>
       </div>
     </div>
-    <details class="more" id="sharedMore">
-      <summary id="sharedMoreLabel">其他設定</summary>
-      <div class="shared">
-        <label class="field">
-          <span class="lbl">同一 lot 支數（一般為 1）</span>
-          <input type="text" id="qty" inputmode="numeric" autocomplete="off" value="1">
-          <div class="hint">用於每支計算的費用：香港酒稅、朋友帶貨費、WA 上架費、SWA 登記費</div>
-        </label>
-        <label class="field only-buy">
-          <span class="lbl">每支容量（計算香港酒稅用）</span>
-          <select id="litres">
-            <option value="0.7">70cl（0.7 公升）</option>
-            <option value="0.75">75cl（0.75 公升）</option>
-            <option value="1">1 公升</option>
-            <option value="1.5">1.5 公升</option>
-            <option value="3">3 公升</option>
-          </select>
-        </label>
-      </div>
-    </details>
   </section>
 
   <!-- 三個平台 -->
@@ -329,6 +325,29 @@
         </div>
       </div>
     </div>
+  </section>
+
+  <section class="panel more-panel">
+    <details class="more" id="sharedMore" style="margin-top:0">
+      <summary id="sharedMoreLabel">其他設定</summary>
+      <div class="shared">
+        <label class="field">
+          <span class="lbl">同一 lot 支數（一般為 1）</span>
+          <input type="text" id="qty" inputmode="numeric" autocomplete="off" value="1">
+          <div class="hint">用於按支數計算的費用：香港酒稅、朋友帶貨費、WA／SWA 運費、WA 上架費、SWA 登記費</div>
+        </label>
+        <label class="field only-buy">
+          <span class="lbl">每支容量（計算香港酒稅用）</span>
+          <select id="litres">
+            <option value="0.7">70cl（0.7 公升）</option>
+            <option value="0.75">75cl（0.75 公升）</option>
+            <option value="1">1 公升</option>
+            <option value="1.5">1.5 公升</option>
+            <option value="3">3 公升</option>
+          </select>
+        </label>
+      </div>
+    </details>
   </section>
 
   <footer class="page">
@@ -369,13 +388,13 @@
 
   /* ---------- 每格設定 ---------- */
   // 買入一入網站預設寄往英國（Mia 2026-11-10）→ 酒稅、外國卡跟住唔剔
-  const DEFAULT_CARD = { dest: 'uk', carryFee: 750, duty: false, vat: true, card: false, insurance: false, account: 'hk', reserve: true, shipCur: 'hkd', buyerFixed: '3' };
+  const DEFAULT_CARD = { dest: 'uk', carryFee: 500, duty: false, vat: true, card: false, insurance: false, account: 'hk', reserve: true, shipCur: 'hkd', buyerFixed: '3' };
   const prefs = loadPrefs();
   const cards = {};
   // 送貨方式（同跟住佢嘅酒稅／外國卡）每次開都返預設，唔用上次記低嘅
   C.PLATFORMS.forEach(p => {
     cards[p] = Object.assign({}, DEFAULT_CARD, (prefs.cards || {})[p] || {},
-      { dest: DEFAULT_CARD.dest, duty: DEFAULT_CARD.duty, card: DEFAULT_CARD.card });
+      { dest: DEFAULT_CARD.dest, duty: DEFAULT_CARD.duty, card: DEFAULT_CARD.card, carryFee: DEFAULT_CARD.carryFee });
   });
   // Catawiki 賣出運費：每個帳戶各自一套（預設跟 FEES；改咗只喺今次開住頁面時記住）
   const catShip = {};
@@ -390,7 +409,7 @@
     const buyChecks = [
       '<label class="check only-hkdest"><input type="checkbox" data-k="duty"> 香港烈酒稅</label>',
       p !== 'catawiki' ? '<label class="check"><input type="checkbox" data-k="vat"> 買家佣金加 VAT 20%</label>' : '',
-      p !== 'catawiki' ? `<label class="check"><input type="checkbox" data-k="card"> 以香港／外國信用卡付款（+${pctTxt(F[p].cardSurcharge)}）</label>` : '',
+      p !== 'catawiki' ? `<label class="check check-card"><input type="checkbox" data-k="card"> 以香港／外國信用卡付款（+${pctTxt(F[p].cardSurcharge)}）<span class="remind-text">如以香港卡付款，請剔選此項</span></label>` : '',
       p !== 'catawiki' ? `<label class="check"><input type="checkbox" data-k="insurance"> 運輸保險（落槌價 ${pctTxt(F[p].insurancePct)} + VAT）</label>` : '',
     ].join('');
     const sellTop = p === 'catawiki'
@@ -471,6 +490,9 @@
     } else if (shipSym) {
       shipSym.textContent = st.shipCur === 'fx' ? SYM[CUR[p]] : 'HK$';
     }
+    // 寄香港但未剔外國卡 → 紅色提示（Mia 11-10：預設唔剔，但要提醒）
+    const cc = $('.check-card', el);
+    if (cc) cc.classList.toggle('remind', st.dest === 'hk' && !st.card);
     const hint = $('[data-role="accountHint"]', el);
     if (hint) hint.textContent = st.account === 'hk'
       ? '佣金：€10,000 或以下 7.5%；超過 €10,000 全數 5%'
@@ -716,7 +738,6 @@
     if (p === 'catawiki' && k === 'shipCur') catShip[cards.catawiki.account].cur = v;
     else cards[p][k] = v;
     if (k === 'dest') cards[p].duty = (v === 'hk'); // 寄香港自動剔；朋友帶預設唔剔
-    if (k === 'dest' && (p === 'wa' || p === 'swa')) cards[p].card = (v === 'hk'); // 外國卡 +3%：只有寄香港預設剔（Mia 11-10）
     if (k === 'dest') applyAutoShip(p);
     syncCardUI(p); recalc(); savePrefs();
   });
@@ -740,7 +761,7 @@
     if (!cb) return;
     const p = cb.closest('.card').dataset.p;
     cards[p][cb.dataset.k] = cb.checked;
-    recalc(); savePrefs();
+    syncCardUI(p); recalc(); savePrefs();
   });
   grid.addEventListener('input', e => {
     const i = e.target.closest('input[type="text"][data-k]');
@@ -756,13 +777,14 @@
     $$('#profitUnit button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === unit)));
     const v = C.num($('#profit').value);
     $$('#profitPresets button').forEach(b => b.setAttribute('aria-pressed', String(unit === 'pct' && v === Number(b.dataset.v))));
+    $$('#profitPresetsHkd button').forEach(b => b.setAttribute('aria-pressed', String(unit === 'hkd' && v === Number(b.dataset.v))));
   }
   $$('#profitUnit button').forEach(b => b.addEventListener('click', () => {
     if (document.body.dataset.profitunit !== b.dataset.v) $('#profit').value = ''; // 換單位就清空，免得 10% 變 HK$10
     document.body.dataset.profitunit = b.dataset.v;
     syncProfitUI(); recalc(); savePrefs();
   }));
-  $$('#profitPresets button').forEach(b => b.addEventListener('click', () => {
+  $$('#profitPresets button, #profitPresetsHkd button').forEach(b => b.addEventListener('click', () => {
     $('#profit').value = b.dataset.v;
     syncProfitUI(); recalc();
   }));
