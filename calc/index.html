@@ -173,7 +173,8 @@
   footer.page { text-align: center; color: var(--muted); font-size: 13px; margin-top: 22px; }
 
   /* 匯率（頁底，細隻） */
-  .rates-panel { margin-top: 18px; padding: 12px 14px; font-size: 14px; }
+  .rates-panel { margin-top: 18px; padding: 6px 14px; font-size: 14px; }
+  .rates-panel .rates { margin: 6px 0 10px; }
   .more-panel { padding: 6px 14px; }
   .rates-title { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; letter-spacing: 1px; }
   .rates-panel .rate-field .lbl { display: none; }
@@ -305,7 +306,8 @@
 
   <!-- 匯率 -->
   <section class="panel rates-panel" id="ratesPanel">
-    <div class="rates-title">匯率</div>
+    <details class="more" id="ratesMore" style="margin-top:0">
+    <summary id="ratesLabel">匯率</summary>
     <div class="rates">
       <label class="rate-field">
         <span class="lbl">歐元匯率</span>
@@ -325,6 +327,7 @@
         </div>
       </div>
     </div>
+    </details>
   </section>
 
   <section class="panel more-panel">
@@ -528,6 +531,7 @@
       } catch (e) { /* 試下一個 */ }
     }
     setStatus('未能取得即時匯率，請手動輸入', 'error');
+    $('#ratesMore').open = true; // 攞唔到就自動打開，方便即刻手動輸入
     recalc();
   }
 
