@@ -195,6 +195,20 @@
   .presets button { min-height: 42px; padding: 4px 2px; }
   body[data-profitunit="hkd"] .presets { display: none; }
 
+  /* 要填嘅格仔：淺黃底、粗邊、粗體（匯率格自動填，唔加） */
+  .shared input[type="text"], .card input[type="text"] {
+    background: #fff4b8;
+    border: 2.5px solid #c9952b;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .shared input[type="text"]:focus, .card input[type="text"]:focus {
+    background: #fffbe0;
+    border-color: #8c6a1e;
+    box-shadow: 0 0 0 3px rgba(201, 149, 43, .28);
+  }
+  .shared input[type="text"]::placeholder, .card input[type="text"]::placeholder { font-weight: 500; color: #a8995f; }
+
   /* 顯示／隱藏 */
   body[data-tab="buy"] .only-sell, body[data-tab="sell"] .only-buy { display: none !important; }
   body:not([data-buymode="bid"]) .only-bid { display: none !important; }
@@ -267,21 +281,27 @@
           <button type="button" data-v="30">30%</button>
         </div>
       </div>
-      <label class="field">
-        <span class="lbl">同一 lot 支數</span>
-        <input type="text" id="qty" inputmode="numeric" autocomplete="off" value="1">
-      </label>
-      <label class="field only-buy">
-        <span class="lbl">每支容量（計算香港酒稅用）</span>
-        <select id="litres">
-          <option value="0.7">70cl（0.7 公升）</option>
-          <option value="0.75">75cl（0.75 公升）</option>
-          <option value="1">1 公升</option>
-          <option value="1.5">1.5 公升</option>
-          <option value="3">3 公升</option>
-        </select>
-      </label>
     </div>
+    <details class="more" id="sharedMore">
+      <summary id="sharedMoreLabel">其他設定</summary>
+      <div class="shared">
+        <label class="field">
+          <span class="lbl">同一 lot 支數（一般為 1）</span>
+          <input type="text" id="qty" inputmode="numeric" autocomplete="off" value="1">
+          <div class="hint">用於每支計算的費用：香港酒稅、朋友帶貨費、WA 上架費、SWA 登記費</div>
+        </label>
+        <label class="field only-buy">
+          <span class="lbl">每支容量（計算香港酒稅用）</span>
+          <select id="litres">
+            <option value="0.7">70cl（0.7 公升）</option>
+            <option value="0.75">75cl（0.75 公升）</option>
+            <option value="1">1 公升</option>
+            <option value="1.5">1.5 公升</option>
+            <option value="3">3 公升</option>
+          </select>
+        </label>
+      </div>
+    </details>
   </section>
 
   <!-- 三個平台 -->
@@ -348,10 +368,15 @@
   }
 
   /* ---------- 每格設定 ---------- */
-  const DEFAULT_CARD = { dest: 'hk', carryFee: 750, duty: true, vat: true, card: true, insurance: false, account: 'hk', reserve: true, shipCur: 'hkd', buyerFixed: '3' };
+  // 買入一入網站預設寄往英國（Mia 2026-11-10）→ 酒稅、外國卡跟住唔剔
+  const DEFAULT_CARD = { dest: 'uk', carryFee: 750, duty: false, vat: true, card: false, insurance: false, account: 'hk', reserve: true, shipCur: 'hkd', buyerFixed: '3' };
   const prefs = loadPrefs();
   const cards = {};
-  C.PLATFORMS.forEach(p => { cards[p] = Object.assign({}, DEFAULT_CARD, (prefs.cards || {})[p] || {}); });
+  // 送貨方式（同跟住佢嘅酒稅／外國卡）每次開都返預設，唔用上次記低嘅
+  C.PLATFORMS.forEach(p => {
+    cards[p] = Object.assign({}, DEFAULT_CARD, (prefs.cards || {})[p] || {},
+      { dest: DEFAULT_CARD.dest, duty: DEFAULT_CARD.duty, card: DEFAULT_CARD.card });
+  });
   // Catawiki 賣出運費：每個帳戶各自一套（預設跟 FEES；改咗只喺今次開住頁面時記住）
   const catShip = {};
   Object.keys(F.catawikiSellShipDefaults).forEach(a => {
@@ -365,8 +390,8 @@
     const buyChecks = [
       '<label class="check only-hkdest"><input type="checkbox" data-k="duty"> 香港烈酒稅</label>',
       p !== 'catawiki' ? '<label class="check"><input type="checkbox" data-k="vat"> 買家佣金加 VAT 20%</label>' : '',
-      p !== 'catawiki' ? '<label class="check"><input type="checkbox" data-k="card"> 以香港／外國信用卡付款（+3%）</label>' : '',
-      p === 'swa' ? '<label class="check"><input type="checkbox" data-k="insurance"> 運輸保險（落槌價 3% + VAT）</label>' : '',
+      p !== 'catawiki' ? `<label class="check"><input type="checkbox" data-k="card"> 以香港／外國信用卡付款（+${pctTxt(F[p].cardSurcharge)}）</label>` : '',
+      p !== 'catawiki' ? `<label class="check"><input type="checkbox" data-k="insurance"> 運輸保險（落槌價 ${pctTxt(F[p].insurancePct)} + VAT）</label>` : '',
     ].join('');
     const sellTop = p === 'catawiki'
       ? `<div class="field"><span class="lbl">賣家帳戶</span>
@@ -391,8 +416,9 @@
         </div>
         <label class="field only-bid"><span class="lbl">落槌價</span>
           <div class="money"><i>${sym}</i><input type="text" data-k="bid" inputmode="decimal" autocomplete="off" placeholder="0"></div></label>
-        <label class="field"><span class="lbl">運費（以賣家所定為準）</span>
-          <div class="money"><i>${sym}</i><input type="text" data-k="buyShip" inputmode="decimal" autocomplete="off" placeholder="0"></div></label>
+        <label class="field"><span class="lbl">${p === 'catawiki' ? '運費（以賣家所定為準）' : '運費（按官方運費表自動計，可修改）'}</span>
+          <div class="money"><i>${sym}</i><input type="text" data-k="buyShip" inputmode="decimal" autocomplete="off" placeholder="0"></div>
+          ${p === 'catawiki' ? '' : '<div class="hint" data-role="shipHint"></div>'}</label>
         <div class="checks">${buyChecks}</div>
         ${p === 'catawiki' ? `<details class="more"><summary>其他設定</summary>
           <label class="field"><span class="lbl">買家每單定額費（以拍品頁為準）</span>
@@ -518,10 +544,10 @@
     }
     if (r.shipping) out.push(L('運費', s + f2(r.shipping)));
     if (r.insurance) {
-      out.push(L('運輸保險 3%', s + f2(r.insurance)));
+      out.push(L(`運輸保險 ${pctTxt(F[p].insurancePct)}`, s + f2(r.insurance)));
       out.push(L('運輸保險 VAT 20%', s + f2(r.insuranceVat)));
     }
-    if (r.surcharge) out.push(L('信用卡附加費 3%', s + f2(r.surcharge)));
+    if (r.surcharge) out.push(L(`信用卡附加費 ${pctTxt(F[p].cardSurcharge)}`, s + f2(r.surcharge)));
     out.push(L('小計', s + f2(r.totalFx), 'sub'));
     out.push(L(`× 匯率 ${r.rateEff.toFixed(4)}（已加 ${pctTxt(getBuffer())}）`, 'HK$' + f2(r.fxHKD)));
     if (r.duty) out.push(L(`香港烈酒稅（每支 HK$${f2(r.dutyPerBottle)} × ${r.qty}）`, 'HK$' + f2(r.duty)));
@@ -583,7 +609,6 @@
   }
 
   function footText(p, tab) {
-    if (p === 'wa' && tab === 'buy') return `費率核實：${F.verified}　⚠️ 買家佣金 12.5% 未經官方頁直接核實`;
     return `費率核實：${F.verified}（官方條款）`;
   }
 
@@ -655,6 +680,12 @@
 
   function recalc() {
     showEffRates();
+    // 「其他設定」摺埋時都顯示改過嘅值，免得同事唔記得
+    const qn = Math.floor(C.num($('#qty').value));
+    const bits = [];
+    if (qn >= 1 && qn !== 1) bits.push(`支數 ${qn}`);
+    if (document.body.dataset.tab === 'buy' && $('#litres').value !== '0.7') bits.push(`容量 ${$('#litres').selectedOptions[0].text.split('（')[0]}`);
+    $('#sharedMoreLabel').textContent = bits.length ? `其他設定（${bits.join('，')}）` : '其他設定';
     $('#costLabel').textContent = document.body.dataset.sellmode === 'hammer' ? '入貨價（港幣，選填，用作計算利潤）' : '入貨價（港幣）';
     C.PLATFORMS.forEach(p => {
       try { calcCard(p); }
@@ -686,8 +717,24 @@
     else cards[p][k] = v;
     if (k === 'dest') cards[p].duty = (v === 'hk'); // 寄香港自動剔；朋友帶預設唔剔
     if (k === 'dest' && (p === 'wa' || p === 'swa')) cards[p].card = (v === 'hk'); // 外國卡 +3%：只有寄香港預設剔（Mia 11-10）
+    if (k === 'dest') applyAutoShip(p);
     syncCardUI(p); recalc(); savePrefs();
   });
+
+  /* WA／SWA 買入運費：按送貨方式同支數自動填（人手改咗會保留，直至再轉送貨方式或支數） */
+  const SHIP_HINT = {
+    wa: { uk: '官方運費表：1 支 £11，每增加一支 +£2（另加 VAT，已計入）',
+          hk: '官方運費表：1 支 £70，每增加一支 +£20（另加 VAT 20%，保守計入）' },
+    swa: { uk: '官方運費表：1 支 £13.20，每增加一支 +£2.40（已含 VAT）',
+           hk: 'SWA 寄香港沒有固定價格（DHL 按體積報價），暫以 WA 價格估算（含 VAT）' },
+  };
+  function applyAutoShip(p) {
+    const v = C.autoShipping(p, cards[p].dest, $('#qty').value);
+    if (v === null) return;
+    const el = $(`.card[data-p="${p}"]`);
+    $('input[data-k="buyShip"]', el).value = v.toFixed(2);
+    $('[data-role="shipHint"]', el).textContent = SHIP_HINT[p][cards[p].dest === 'hk' ? 'hk' : 'uk'];
+  }
   grid.addEventListener('change', e => {
     const cb = e.target.closest('input[type="checkbox"][data-k]');
     if (!cb) return;
@@ -720,7 +767,10 @@
     syncProfitUI(); recalc();
   }));
   $('#profit').addEventListener('input', syncProfitUI);
-  ['#budget', '#cost', '#profit', '#qty', '#buffer'].forEach(id => $(id).addEventListener('input', () => { recalc(); if (id === '#buffer') savePrefs(); }));
+  ['#budget', '#cost', '#profit', '#qty', '#buffer'].forEach(id => $(id).addEventListener('input', () => {
+    if (id === '#qty') C.PLATFORMS.forEach(applyAutoShip);
+    recalc(); if (id === '#buffer') savePrefs();
+  }));
   $('#litres').addEventListener('change', () => { recalc(); savePrefs(); });
   ['#rateEUR', '#rateGBP'].forEach(id => $(id).addEventListener('input', () => { setStatus('手動輸入匯率', 'manual'); recalc(); }));
   $('#refreshRates').addEventListener('click', fetchRates);
@@ -736,6 +786,7 @@
   if (prefs.profitunit === 'pct' || prefs.profitunit === 'hkd') document.body.dataset.profitunit = prefs.profitunit;
   syncProfitUI();
   C.PLATFORMS.forEach(syncCardUI);
+  C.PLATFORMS.forEach(applyAutoShip);
   recalc();
   fetchRates();
 })();

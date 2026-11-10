@@ -28,8 +28,9 @@
     },
     wa: {
       currency: 'GBP',
-      buyerPct: 0.125,       // 買家佣金 12.5% + VAT（VAT 只收喺佣金）
-      cardSurcharge: 0.03,   // 香港／外國信用卡 3%
+      buyerPct: 0.15,        // 買家佣金 15% + VAT（官方 Buyer Fees 頁，Mia 2026-11-10 貼；舊二手 12.5% 已過時）
+      cardSurcharge: 0.035,  // 英國／EEA 以外信用卡及扣帳卡 3.5%
+      insurancePct: 0.04,    // Loss and Breakage Assurance：落槌價 4%（自選；費用不含 VAT → 加 VAT）
       sellerPct: 0.05,       // 賣家佣金 5% + VAT
       listingPerBottle: 7,   // 上架費每支 £7 + VAT
       reservePerLot: 10,     // 保留價費每 lot £10 + VAT
@@ -43,6 +44,13 @@
       sellerPct: 0,
       entryPerBottle: 8,     // 登記費每支 £8 + VAT
       reservePerLot: 10,     // 保留價費每 lot £10 + VAT
+    },
+    // 買入運費（英鎊，未計 VAT）＝ base + perBottle × 支數；官方運費頁 2026-11-10 讀
+    //   WA 英國 £11／£13／£15…（+VAT）；SWA 英國 £13.20／£15.60…（已含 VAT）＝同一條公式 ×1.2
+    //   WA 香港 £70／£90／£110…；SWA 香港冇固定價（DHL 按體積報價）→ Mia 決定暫用 WA 價
+    buyShipping: {
+      uk: { base: 9, perBottle: 2 },
+      hk: { base: 50, perBottle: 20 },
     },
     hkDuty: { band: 200, bandRate: 1.0, aboveRate: 0.10 }, // 首 HK$200 收 100%，超出 10%
     carryFees: [500, 750],   // 朋友帶返香港，每支 HK$
@@ -101,7 +109,7 @@
       premiumVat = premiumPct * FEES.ukVat;
     }
     const premium = premiumPct + premiumFixed;
-    const insurance = (p === 'swa' && o.insurance) ? hammer * cfg.insurancePct : 0;
+    const insurance = (cfg.insurancePct && o.insurance) ? hammer * cfg.insurancePct : 0;
     const insuranceVat = insurance * FEES.ukVat;
     const subtotalFx = hammer + premium + premiumVat + insurance + insuranceVat + shipping;
     const surcharge = ((p === 'wa' || p === 'swa') && o.card) ? subtotalFx * cfg.cardSurcharge : 0;
@@ -116,6 +124,14 @@
       hammer, qty, premiumPct, premiumFixed, premium, premiumVat, insurance, insuranceVat, shipping,
       surcharge, totalFx, rateEff, fxHKD, duty, dutyPerBottle, carry, totalHKD,
     };
+  }
+
+  /** 買：WA／SWA 官方運費（英鎊，已加 VAT 20%）。寄英國同朋友帶用英國價。Catawiki 由賣家定 → null */
+  function autoShipping(p, dest, qtyIn) {
+    if (p !== 'wa' && p !== 'swa') return null;
+    const t = FEES.buyShipping[dest === 'hk' ? 'hk' : 'uk'];
+    const net = t.base + t.perBottle * qtyOf(qtyIn);
+    return Math.round(net * (1 + FEES.ukVat) * 100) / 100;
   }
 
   /** 買：由全包預算（港幣）計最高落槌價（整數，向下取）。預算唔夠就 null */
@@ -240,7 +256,7 @@
   }
 
   return {
-    FEES, PLATFORMS, num, hkDuty, buyCost, maxBid, sellFees, sellNet,
+    FEES, PLATFORMS, num, hkDuty, buyCost, maxBid, autoShipping, sellFees, sellNet,
     minPrice, catawikiSellerFixed, catawikiCliffTip, segmentStarts,
   };
 });
