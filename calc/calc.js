@@ -13,7 +13,7 @@
 
   const FEES = {
     verified: '2026-11-10',
-    fxBuffer: 0.01,          // 匯率保守差額：買 ×1.01，賣 ×0.99
+    fxBuffer: 0.02,          // 匯率保守差額：買 ×1.02，賣 ×0.98（Mia 2026-11-10 由 1% 改 2%）
     ukVat: 0.20,
     catawiki: {
       currency: 'EUR',
@@ -38,6 +38,8 @@
     swa: {
       currency: 'GBP',
       buyerPct: 0.15,        // 買家佣金 15% + VAT
+      cardSurcharge: 0.03,   // 英國／歐洲以外信用卡「may incur 3%」（條款 2026-11-10）
+      insurancePct: 0.03,    // 運輸保險：落槌價 3% + VAT（SWA 預設收，結帳可剔走）
       sellerPct: 0,
       entryPerBottle: 8,     // 登記費每支 £8 + VAT
       reservePerLot: 10,     // 保留價費每 lot £10 + VAT
@@ -99,8 +101,10 @@
       premiumVat = premiumPct * FEES.ukVat;
     }
     const premium = premiumPct + premiumFixed;
-    const subtotalFx = hammer + premium + premiumVat + shipping;
-    const surcharge = (p === 'wa' && o.card) ? subtotalFx * cfg.cardSurcharge : 0;
+    const insurance = (p === 'swa' && o.insurance) ? hammer * cfg.insurancePct : 0;
+    const insuranceVat = insurance * FEES.ukVat;
+    const subtotalFx = hammer + premium + premiumVat + insurance + insuranceVat + shipping;
+    const surcharge = ((p === 'wa' || p === 'swa') && o.card) ? subtotalFx * cfg.cardSurcharge : 0;
     const totalFx = subtotalFx + surcharge;
     const fxHKD = totalFx * rateEff;
     const dutyPerBottle = o.duty ? hkDuty(hammer * rateEff / qty, o.litres) : 0;
@@ -109,7 +113,7 @@
     const totalHKD = fxHKD + duty + carry;
 
     return {
-      hammer, qty, premiumPct, premiumFixed, premium, premiumVat, shipping,
+      hammer, qty, premiumPct, premiumFixed, premium, premiumVat, insurance, insuranceVat, shipping,
       surcharge, totalFx, rateEff, fxHKD, duty, dutyPerBottle, carry, totalHKD,
     };
   }

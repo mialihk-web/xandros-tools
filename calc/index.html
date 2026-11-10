@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Xandros 拍賣計算器</title>
+<title>威士忌拍賣計算器</title>
 <style>
   :root {
     --bg: #f6f4ef;
@@ -222,7 +222,7 @@
 <div class="wrap">
 
   <header class="top">
-    <h1>Xandros 拍賣計算器</h1>
+    <h1>威士忌拍賣計算器</h1>
     <p>Catawiki · Whisky Auctioneer · Scotch Whisky Auctions</p>
   </header>
 
@@ -304,7 +304,7 @@
       <div class="rate-side">
         <span class="rate-status" id="rateStatus">正在取得即時匯率…</span>
         <div class="buffer-row">
-          保守差額 <input type="text" id="buffer" inputmode="decimal" value="1"> %
+          保守差額 <input type="text" id="buffer" inputmode="decimal" value="2"> %
           <button type="button" class="btn-ghost" id="refreshRates">重新取得</button>
         </div>
       </div>
@@ -341,14 +341,14 @@
   function savePrefs() {
     try {
       const prefs = { tab: document.body.dataset.tab, buymode: document.body.dataset.buymode, sellmode: document.body.dataset.sellmode,
-        buffer: $('#buffer').value, litres: $('#litres').value, profitunit: document.body.dataset.profitunit, cards: {} };
+        buffer: $('#buffer').value, bufferDefault: String(F.fxBuffer * 100), litres: $('#litres').value, profitunit: document.body.dataset.profitunit, cards: {} };
       C.PLATFORMS.forEach(p => { prefs.cards[p] = cards[p]; });
       localStorage.setItem(STORE_KEY, JSON.stringify(prefs));
     } catch (e) { /* 私隱模式等情況：唔記都照用 */ }
   }
 
   /* ---------- 每格設定 ---------- */
-  const DEFAULT_CARD = { dest: 'hk', carryFee: 750, duty: true, vat: true, card: true, account: 'hk', reserve: true, shipCur: 'hkd', buyerFixed: '3' };
+  const DEFAULT_CARD = { dest: 'hk', carryFee: 750, duty: true, vat: true, card: true, insurance: false, account: 'hk', reserve: true, shipCur: 'hkd', buyerFixed: '3' };
   const prefs = loadPrefs();
   const cards = {};
   C.PLATFORMS.forEach(p => { cards[p] = Object.assign({}, DEFAULT_CARD, (prefs.cards || {})[p] || {}); });
@@ -365,7 +365,8 @@
     const buyChecks = [
       '<label class="check only-hkdest"><input type="checkbox" data-k="duty"> 香港烈酒稅</label>',
       p !== 'catawiki' ? '<label class="check"><input type="checkbox" data-k="vat"> 買家佣金加 VAT 20%</label>' : '',
-      p === 'wa' ? '<label class="check"><input type="checkbox" data-k="card"> 以香港／外國信用卡付款（+3%）</label>' : '',
+      p !== 'catawiki' ? '<label class="check"><input type="checkbox" data-k="card"> 以香港／外國信用卡付款（+3%）</label>' : '',
+      p === 'swa' ? '<label class="check"><input type="checkbox" data-k="insurance"> 運輸保險（落槌價 3% + VAT）</label>' : '',
     ].join('');
     const sellTop = p === 'catawiki'
       ? `<div class="field"><span class="lbl">賣家帳戶</span>
@@ -501,7 +502,7 @@
     return {
       qty: $('#qty').value, shipping: val(el, 'buyShip'), rate: getRate(CUR[p]), buffer: getBuffer(),
       dest: st.dest, duty: st.dest !== 'uk' && st.duty, carryFee: st.carryFee,
-      vat: st.vat, card: st.card, buyerFixed: st.buyerFixed, litres: $('#litres').value,
+      vat: st.vat, card: st.card, insurance: st.insurance, buyerFixed: st.buyerFixed, litres: $('#litres').value,
     };
   }
 
@@ -516,6 +517,10 @@
       if (r.premiumVat) out.push(L('買家佣金 VAT 20%', s + f2(r.premiumVat)));
     }
     if (r.shipping) out.push(L('運費', s + f2(r.shipping)));
+    if (r.insurance) {
+      out.push(L('運輸保險 3%', s + f2(r.insurance)));
+      out.push(L('運輸保險 VAT 20%', s + f2(r.insuranceVat)));
+    }
     if (r.surcharge) out.push(L('信用卡附加費 3%', s + f2(r.surcharge)));
     out.push(L('小計', s + f2(r.totalFx), 'sub'));
     out.push(L(`× 匯率 ${r.rateEff.toFixed(4)}（已加 ${pctTxt(getBuffer())}）`, 'HK$' + f2(r.fxHKD)));
@@ -680,6 +685,7 @@
     if (p === 'catawiki' && k === 'shipCur') catShip[cards.catawiki.account].cur = v;
     else cards[p][k] = v;
     if (k === 'dest') cards[p].duty = (v === 'hk'); // 寄香港自動剔；朋友帶預設唔剔
+    if (k === 'dest' && (p === 'wa' || p === 'swa')) cards[p].card = (v === 'hk'); // 外國卡 +3%：只有寄香港預設剔（Mia 11-10）
     syncCardUI(p); recalc(); savePrefs();
   });
   grid.addEventListener('change', e => {
@@ -723,7 +729,9 @@
   if (prefs.tab === 'buy' || prefs.tab === 'sell') setTab(prefs.tab);
   if (prefs.buymode === 'budget' || prefs.buymode === 'bid') setMode('buymode', prefs.buymode);
   if (prefs.sellmode === 'cost' || prefs.sellmode === 'hammer') setMode('sellmode', prefs.sellmode);
-  if (prefs.buffer != null && prefs.buffer !== '') $('#buffer').value = prefs.buffer;
+  $('#buffer').value = String(F.fxBuffer * 100);
+  // 舊版（預設 1%）記低嘅數唔再用；只用喺現行預設下記低嘅
+  if (prefs.buffer != null && prefs.buffer !== '' && prefs.bufferDefault === String(F.fxBuffer * 100)) $('#buffer').value = prefs.buffer;
   if (prefs.litres) $('#litres').value = prefs.litres;
   if (prefs.profitunit === 'pct' || prefs.profitunit === 'hkd') document.body.dataset.profitunit = prefs.profitunit;
   syncProfitUI();
