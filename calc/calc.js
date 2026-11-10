@@ -44,6 +44,11 @@
     },
     hkDuty: { band: 200, bandRate: 1.0, aboveRate: 0.10 }, // 首 HK$200 收 100%，超出 10%
     carryFees: [500, 750],   // 朋友帶返香港，每支 HK$
+    // Catawiki 賣出運費預設（Mia 2026-11-10）：買家付（€，Catawiki 轉交）／賣方實際運費
+    catawikiSellShipDefaults: {
+      hk: { buyer: 50, actual: 650, cur: 'hkd' },  // 實際 HK$650
+      uk: { buyer: 20, actual: 30, cur: 'alt' },   // 實際約 £30
+    },
     defaultLitres: 0.7,
   };
 
@@ -155,22 +160,28 @@
 
   /**
    * 賣：實收
-   * o = { hammer, qty, account, reserve, shipping, shipCur: 'hkd'|'fx', rate, buffer, cost }
+   * o = { hammer, qty, account, reserve, rate, buffer, cost,
+   *       buyerShipping（只限 Catawiki：買家付、Catawiki 轉交嘅運費，平台貨幣；佣金唔計呢部分）,
+   *       shipping（賣方實際運費）, shipCur: 'hkd' 港幣 | 'fx' 平台貨幣 | 'alt' 第三種貨幣（要俾 altRate） }
    */
   function sellNet(p, o) {
     const hammer = pos(o.hammer);
     const fees = sellFees(p, hammer, o);
+    const buffer = Number.isFinite(num(o.buffer)) ? num(o.buffer) : FEES.fxBuffer;
+    const buyerShipping = p === 'catawiki' ? pos(o.buyerShipping) : 0;
     const ship = pos(o.shipping);
     const shipFx = o.shipCur === 'fx' ? ship : 0;
-    const shipHKD = o.shipCur === 'fx' ? 0 : ship;
-    const buffer = Number.isFinite(num(o.buffer)) ? num(o.buffer) : FEES.fxBuffer;
+    const shipAlt = o.shipCur === 'alt' ? ship : 0;
+    const altRateEff = pos(o.altRate) * (1 + buffer); // 支出：當外幣貴 1%
+    const shipAltHKD = shipAlt * altRateEff;
+    const shipHKD = (o.shipCur === 'fx' || o.shipCur === 'alt') ? 0 : ship;
     const rateEff = pos(o.rate) * (1 - buffer);
-    const netFx = hammer - fees.total - shipFx;
-    const netHKD = netFx * rateEff - shipHKD;
+    const netFx = hammer - fees.total + buyerShipping - shipFx;
+    const netHKD = netFx * rateEff - shipHKD - shipAltHKD;
     const cost = pos(o.cost);
     const profit = cost > 0 ? netHKD - cost : null;
     const profitPct = cost > 0 ? profit / cost : null;
-    return { hammer, fees, shipFx, shipHKD, rateEff, netFx, netHKD, cost, profit, profitPct };
+    return { hammer, fees, buyerShipping, shipFx, shipHKD, shipAlt, altRateEff, shipAltHKD, rateEff, netFx, netHKD, cost, profit, profitPct };
   }
 
   /** 計底價時要分段處理嘅起點（段內實收隨成交價上升） */

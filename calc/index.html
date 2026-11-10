@@ -126,6 +126,7 @@
   .ship-row .money { flex: 1 1 auto; min-width: 0; }
   .ship-row .seg { flex: 0 0 120px; }
   .ship-row .seg button { min-height: 50px; padding: 4px 6px; }
+  .ship-row .seg.cur3 { flex-basis: 156px; flex-wrap: nowrap; }
 
   details.more { margin-top: 10px; }
   details.more > summary, details.breakdown > summary {
@@ -167,6 +168,33 @@
 
   footer.page { text-align: center; color: var(--muted); font-size: 13px; margin-top: 22px; }
 
+  /* 匯率（頁底，細隻） */
+  .rates-panel { margin-top: 18px; padding: 12px 14px; font-size: 14px; }
+  .rates-title { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; letter-spacing: 1px; }
+  .rates-panel .rate-field .lbl { display: none; }
+  .rates-panel .rate-input { font-size: 14px; }
+  .rates-panel .rate-input input[type="text"] { height: 38px; font-size: 15px; width: 110px; flex: 0 1 110px; }
+  .rates-panel .rate-eff { font-size: 12px; }
+  .rates-panel .rate-status { font-size: 12px; }
+  .rates-panel .buffer-row { font-size: 13px; }
+  .rates-panel .buffer-row input[type="text"] { height: 36px; width: 56px; font-size: 15px; }
+  .rates-panel .btn-ghost { min-height: 36px; padding: 6px 12px; font-size: 13px; }
+
+  /* 目標利潤 */
+  .profit-row { display: flex; gap: 8px; }
+  .unit-seg { flex: 0 0 112px; flex-wrap: nowrap; }
+  .unit-seg button { min-height: 50px; padding: 4px 6px; }
+  .profit-input { position: relative; flex: 1 1 auto; min-width: 0; }
+  .profit-input i { position: absolute; top: 50%; transform: translateY(-50%); font-style: normal; color: var(--muted); pointer-events: none; }
+  .profit-input .pre { left: 12px; }
+  .profit-input .suf { right: 12px; }
+  body[data-profitunit="pct"] .profit-input .pre, body[data-profitunit="hkd"] .profit-input .suf { display: none; }
+  body[data-profitunit="pct"] .profit-input input { padding-right: 34px; }
+  body[data-profitunit="hkd"] .profit-input input { padding-left: 46px; }
+  .presets { margin-top: 8px; flex-wrap: nowrap; }
+  .presets button { min-height: 42px; padding: 4px 2px; }
+  body[data-profitunit="hkd"] .presets { display: none; }
+
   /* 顯示／隱藏 */
   body[data-tab="buy"] .only-sell, body[data-tab="sell"] .only-buy { display: none !important; }
   body:not([data-buymode="bid"]) .only-bid { display: none !important; }
@@ -190,36 +218,13 @@
   }
 </style>
 </head>
-<body data-tab="buy" data-buymode="budget" data-sellmode="cost">
+<body data-tab="buy" data-buymode="budget" data-sellmode="cost" data-profitunit="pct">
 <div class="wrap">
 
   <header class="top">
     <h1>Xandros 拍賣計算器</h1>
     <p>Catawiki · Whisky Auctioneer · Scotch Whisky Auctions</p>
   </header>
-
-  <!-- 匯率 -->
-  <section class="panel">
-    <div class="rates">
-      <label class="rate-field">
-        <span class="lbl">歐元匯率</span>
-        <span class="rate-input">1 歐元 = <input type="text" id="rateEUR" inputmode="decimal" autocomplete="off"> 港元</span>
-        <div class="rate-eff" id="effEUR"></div>
-      </label>
-      <label class="rate-field">
-        <span class="lbl">英鎊匯率</span>
-        <span class="rate-input">1 英鎊 = <input type="text" id="rateGBP" inputmode="decimal" autocomplete="off"> 港元</span>
-        <div class="rate-eff" id="effGBP"></div>
-      </label>
-      <div class="rate-side">
-        <span class="rate-status" id="rateStatus">正在取得即時匯率…</span>
-        <div class="buffer-row">
-          保守差額 <input type="text" id="buffer" inputmode="decimal" value="1"> %
-          <button type="button" class="btn-ghost" id="refreshRates">重新取得</button>
-        </div>
-      </div>
-    </div>
-  </section>
 
   <!-- 買／賣 -->
   <div class="tabs" role="group" aria-label="買入或賣出">
@@ -246,10 +251,22 @@
         <span class="lbl" id="costLabel">入貨價（港幣）</span>
         <div class="money"><i>HK$</i><input type="text" id="cost" inputmode="decimal" autocomplete="off" placeholder="例如 8000"></div>
       </label>
-      <label class="field only-sell only-cost">
+      <div class="field only-sell only-cost">
         <span class="lbl">目標利潤</span>
-        <div class="pct"><input type="text" id="profit" inputmode="decimal" autocomplete="off" placeholder="0"><i>%</i></div>
-      </label>
+        <div class="profit-row">
+          <div class="seg unit-seg" id="profitUnit">
+            <button type="button" data-v="pct" aria-pressed="true">%</button>
+            <button type="button" data-v="hkd" aria-pressed="false">HK$</button>
+          </div>
+          <div class="profit-input"><i class="pre">HK$</i><input type="text" id="profit" inputmode="decimal" autocomplete="off" placeholder="0" aria-label="目標利潤"><i class="suf">%</i></div>
+        </div>
+        <div class="seg presets" id="profitPresets">
+          <button type="button" data-v="5">5%</button>
+          <button type="button" data-v="10">10%</button>
+          <button type="button" data-v="20">20%</button>
+          <button type="button" data-v="30">30%</button>
+        </div>
+      </div>
       <label class="field">
         <span class="lbl">同一 lot 支數</span>
         <input type="text" id="qty" inputmode="numeric" autocomplete="off" value="1">
@@ -269,6 +286,30 @@
 
   <!-- 三個平台 -->
   <div class="grid" id="grid"></div>
+
+  <!-- 匯率 -->
+  <section class="panel rates-panel" id="ratesPanel">
+    <div class="rates-title">匯率</div>
+    <div class="rates">
+      <label class="rate-field">
+        <span class="lbl">歐元匯率</span>
+        <span class="rate-input">1 歐元 = <input type="text" id="rateEUR" inputmode="decimal" autocomplete="off"> 港元</span>
+        <div class="rate-eff" id="effEUR"></div>
+      </label>
+      <label class="rate-field">
+        <span class="lbl">英鎊匯率</span>
+        <span class="rate-input">1 英鎊 = <input type="text" id="rateGBP" inputmode="decimal" autocomplete="off"> 港元</span>
+        <div class="rate-eff" id="effGBP"></div>
+      </label>
+      <div class="rate-side">
+        <span class="rate-status" id="rateStatus">正在取得即時匯率…</span>
+        <div class="buffer-row">
+          保守差額 <input type="text" id="buffer" inputmode="decimal" value="1"> %
+          <button type="button" class="btn-ghost" id="refreshRates">重新取得</button>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <footer class="page">
     所有計算僅供參考，實際金額以平台發票為準。<br>
@@ -300,7 +341,7 @@
   function savePrefs() {
     try {
       const prefs = { tab: document.body.dataset.tab, buymode: document.body.dataset.buymode, sellmode: document.body.dataset.sellmode,
-        buffer: $('#buffer').value, litres: $('#litres').value, cards: {} };
+        buffer: $('#buffer').value, litres: $('#litres').value, profitunit: document.body.dataset.profitunit, cards: {} };
       C.PLATFORMS.forEach(p => { prefs.cards[p] = cards[p]; });
       localStorage.setItem(STORE_KEY, JSON.stringify(prefs));
     } catch (e) { /* 私隱模式等情況：唔記都照用 */ }
@@ -311,6 +352,13 @@
   const prefs = loadPrefs();
   const cards = {};
   C.PLATFORMS.forEach(p => { cards[p] = Object.assign({}, DEFAULT_CARD, (prefs.cards || {})[p] || {}); });
+  // Catawiki 賣出運費：每個帳戶各自一套（預設跟 FEES；改咗只喺今次開住頁面時記住）
+  const catShip = {};
+  Object.keys(F.catawikiSellShipDefaults).forEach(a => {
+    const d = F.catawikiSellShipDefaults[a];
+    catShip[a] = { buyer: String(d.buyer), actual: String(d.actual), cur: d.cur };
+  });
+  const CUR_SYM = { hkd: 'HK$', fx: '€', alt: '£' };
 
   function cardHTML(p) {
     const sym = SYM[CUR[p]];
@@ -354,17 +402,19 @@
         ${sellTop}
         <label class="field only-hammer"><span class="lbl">成交價（落槌價）</span>
           <div class="money"><i>${sym}</i><input type="text" data-k="hammer" inputmode="decimal" autocomplete="off" placeholder="0"></div></label>
-        <div class="field"><span class="lbl">運費（賣方支付）</span>
+        ${p === 'catawiki' ? `<label class="field"><span class="lbl">買家付運費（由 Catawiki 轉交）</span>
+          <div class="money"><i>€</i><input type="text" data-k="buyerShip" inputmode="decimal" autocomplete="off" placeholder="0"></div></label>` : ''}
+        <div class="field"><span class="lbl">${p === 'catawiki' ? '實際運費（賣方支付）' : '運費（賣方支付）'}</span>
           <div class="ship-row">
             <div class="money"><i data-role="shipSym">HK$</i><input type="text" data-k="sellShip" inputmode="decimal" autocomplete="off" placeholder="0"></div>
-            <div class="seg" data-k="shipCur"><button type="button" data-v="hkd">港幣</button><button type="button" data-v="fx">${sym}</button></div>
+            <div class="seg${p === 'catawiki' ? ' cur3' : ''}" data-k="shipCur"><button type="button" data-v="hkd">港幣</button><button type="button" data-v="fx">${sym}</button>${p === 'catawiki' ? '<button type="button" data-v="alt">£</button>' : ''}</div>
           </div>
         </div>
       </div>
 
       <div class="result" data-role="result" aria-live="polite"></div>
       <div data-role="notes"></div>
-      <details class="breakdown"><summary>費用明細</summary><div class="lines" data-role="lines"></div></details>
+      <details class="breakdown" open><summary>費用明細</summary><div class="lines" data-role="lines"></div></details>
       <div class="card-foot" data-role="foot"></div>
     </section>`;
   }
@@ -384,7 +434,16 @@
     const bf = $('input[data-k="buyerFixed"]', el);
     if (bf && document.activeElement !== bf) bf.value = st.buyerFixed;
     const shipSym = $('[data-role="shipSym"]', el);
-    if (shipSym) shipSym.textContent = st.shipCur === 'fx' ? SYM[CUR[p]] : 'HK$';
+    if (p === 'catawiki') {
+      const cs = catShip[st.account];
+      $$('.seg[data-k="shipCur"] button', el).forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === cs.cur)));
+      shipSym.textContent = CUR_SYM[cs.cur];
+      const bi = $('input[data-k="buyerShip"]', el), si = $('input[data-k="sellShip"]', el);
+      if (document.activeElement !== bi) bi.value = cs.buyer;
+      if (document.activeElement !== si) si.value = cs.actual;
+    } else if (shipSym) {
+      shipSym.textContent = st.shipCur === 'fx' ? SYM[CUR[p]] : 'HK$';
+    }
     const hint = $('[data-role="accountHint"]', el);
     if (hint) hint.textContent = st.account === 'hk'
       ? '佣金：€10,000 或以下 7.5%；超過 €10,000 全數 5%'
@@ -468,10 +527,15 @@
 
   function sellOpts(p, el) {
     const st = cards[p];
-    return {
+    const o = {
       qty: $('#qty').value, account: st.account, reserve: st.reserve,
       shipping: val(el, 'sellShip'), shipCur: st.shipCur, rate: getRate(CUR[p]), buffer: getBuffer(), cost: $('#cost').value,
     };
+    if (p === 'catawiki') {
+      const cs = catShip[st.account];
+      Object.assign(o, { buyerShipping: cs.buyer, shipping: cs.actual, shipCur: cs.cur, altRate: getRate('GBP') });
+    }
+    return o;
   }
 
   function sellLines(p, r) {
@@ -488,14 +552,18 @@
     }
     if (fe.reserveFee) out.push(L('保留價費', '−' + s + f2(fe.reserveFee)));
     if (fe.vat) out.push(L('平台費用 VAT 20%', '−' + s + f2(fe.vat)));
-    if (r.shipFx) out.push(L('運費', '−' + s + f2(r.shipFx)));
+    const shipLbl = p === 'catawiki' ? '實際運費' : '運費';
+    if (r.buyerShipping) out.push(L('買家付運費（Catawiki 轉交）', '+' + s + f2(r.buyerShipping)));
+    if (r.shipFx) out.push(L(shipLbl, '−' + s + f2(r.shipFx)));
     out.push(L('實收（外幣）', s + f2(r.netFx), 'sub'));
     out.push(L(`× 匯率 ${r.rateEff.toFixed(4)}（已減 ${pctTxt(getBuffer())}）`, 'HK$' + f2(r.netFx * r.rateEff)));
-    if (r.shipHKD) out.push(L('運費（港幣）', '−HK$' + f2(r.shipHKD)));
+    if (r.shipHKD) out.push(L(`${shipLbl}（港幣）`, '−HK$' + f2(r.shipHKD)));
+    if (r.shipAlt) out.push(L(`${shipLbl} £${f2(r.shipAlt)} × 匯率 ${r.altRateEff.toFixed(4)}（已加 ${pctTxt(getBuffer())}）`, '−HK$' + f2(r.shipAltHKD)));
     out.push(L('實收', 'HK$' + f2(r.netHKD), 'total'));
     if (r.cost > 0) {
       out.push(L('入貨價', 'HK$' + f2(r.cost)));
-      out.push(L('利潤', (r.profit < 0 ? '−' : '+') + 'HK$' + f2(Math.abs(r.profit)), r.profit < 0 ? 'neg' : 'pos'));
+      const pf = Math.round(r.netHKD * 100) / 100 - r.cost; // 用已四捨五入嘅實收，唔會同上一行差一仙
+      out.push(L('利潤', (pf < 0 ? '−' : '+') + 'HK$' + f2(Math.abs(pf)), pf < 0 ? 'neg' : 'pos'));
     }
     return out.join('');
   }
@@ -519,7 +587,7 @@
     const tab = document.body.dataset.tab;
     const s = SYM[CUR[p]];
     $('[data-role="foot"]', el).textContent = footText(p, tab);
-    if (!(getRate(CUR[p]) > 0)) return render(el, { empty: '請先輸入匯率' });
+    if (!(getRate(CUR[p]) > 0)) return render(el, { empty: '請先於頁底輸入匯率' });
 
     if (tab === 'buy') {
       const o = buyOpts(p, el);
@@ -548,7 +616,8 @@
       const cost = C.num($('#cost').value);
       if (!(cost > 0)) return render(el, { empty: '請輸入入貨價' });
       const pr = C.num($('#profit').value);
-      const target = cost * (1 + (Number.isFinite(pr) ? pr : 0) / 100);
+      const pv = Number.isFinite(pr) ? pr : 0;
+      const target = document.body.dataset.profitunit === 'hkd' ? cost + pv : cost * (1 + pv / 100);
       const h = C.minPrice(p, o, target);
       if (h === null) return render(el, { empty: '未能計算，請檢查輸入' });
       const r = C.sellNet(p, Object.assign({}, o, { hammer: h }));
@@ -608,7 +677,8 @@
     const k = btn.parentElement.dataset.k;
     let v = btn.dataset.v;
     if (k === 'carryFee') v = Number(v);
-    cards[p][k] = v;
+    if (p === 'catawiki' && k === 'shipCur') catShip[cards.catawiki.account].cur = v;
+    else cards[p][k] = v;
     if (k === 'dest') cards[p].duty = (v === 'hk'); // 寄香港自動剔；朋友帶預設唔剔
     syncCardUI(p); recalc(); savePrefs();
   });
@@ -624,8 +694,26 @@
     if (!i) return;
     const p = i.closest('.card').dataset.p;
     if (i.dataset.k === 'buyerFixed') { cards[p].buyerFixed = i.value; savePrefs(); }
+    if (p === 'catawiki' && i.dataset.k === 'buyerShip') catShip[cards.catawiki.account].buyer = i.value;
+    if (p === 'catawiki' && i.dataset.k === 'sellShip') catShip[cards.catawiki.account].actual = i.value;
     recalc();
   });
+  function syncProfitUI() {
+    const unit = document.body.dataset.profitunit;
+    $$('#profitUnit button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === unit)));
+    const v = C.num($('#profit').value);
+    $$('#profitPresets button').forEach(b => b.setAttribute('aria-pressed', String(unit === 'pct' && v === Number(b.dataset.v))));
+  }
+  $$('#profitUnit button').forEach(b => b.addEventListener('click', () => {
+    if (document.body.dataset.profitunit !== b.dataset.v) $('#profit').value = ''; // 換單位就清空，免得 10% 變 HK$10
+    document.body.dataset.profitunit = b.dataset.v;
+    syncProfitUI(); recalc(); savePrefs();
+  }));
+  $$('#profitPresets button').forEach(b => b.addEventListener('click', () => {
+    $('#profit').value = b.dataset.v;
+    syncProfitUI(); recalc();
+  }));
+  $('#profit').addEventListener('input', syncProfitUI);
   ['#budget', '#cost', '#profit', '#qty', '#buffer'].forEach(id => $(id).addEventListener('input', () => { recalc(); if (id === '#buffer') savePrefs(); }));
   $('#litres').addEventListener('change', () => { recalc(); savePrefs(); });
   ['#rateEUR', '#rateGBP'].forEach(id => $(id).addEventListener('input', () => { setStatus('手動輸入匯率', 'manual'); recalc(); }));
@@ -637,6 +725,8 @@
   if (prefs.sellmode === 'cost' || prefs.sellmode === 'hammer') setMode('sellmode', prefs.sellmode);
   if (prefs.buffer != null && prefs.buffer !== '') $('#buffer').value = prefs.buffer;
   if (prefs.litres) $('#litres').value = prefs.litres;
+  if (prefs.profitunit === 'pct' || prefs.profitunit === 'hkd') document.body.dataset.profitunit = prefs.profitunit;
+  syncProfitUI();
   C.PLATFORMS.forEach(syncCardUI);
   recalc();
   fetchRates();
