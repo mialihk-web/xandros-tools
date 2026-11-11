@@ -53,7 +53,7 @@
       hk: { base: 50, perBottle: 20 },
     },
     hkDuty: { band: 200, bandRate: 1.0, aboveRate: 0.10 }, // 首 HK$200 收 100%，超出 10%
-    carryFees: [500, 750],   // 朋友帶返香港，每支 HK$
+    carryFee: 500,           // 朋友帶返香港，每支固定 HK$500（Mia 2026-11-11 取消 HK$750）
     // Catawiki 賣出運費預設（Mia 2026-11-10）：買家付（€，Catawiki 轉交）／賣方實際運費
     catawikiSellShipDefaults: {
       hk: { buyer: 50, actual: 650, cur: 'hkd' },  // 實際 HK$650
@@ -89,7 +89,8 @@
   /**
    * 買：全包成本
    * o = { hammer, qty, shipping(平台貨幣), rate(1 外幣 = ? 港元), buffer,
-   *       dest: 'uk'|'hk'|'carry', duty, carryFee, vat, card, buyerFixed, litres }
+   *       dest: 'uk'|'hk'|'carry', duty, vat, card, insurance, buyerFixed, litres }
+   *   朋友帶（carry）每支固定 FEES.carryFee
    */
   function buyCost(p, o) {
     const cfg = FEES[p];
@@ -117,7 +118,7 @@
     const fxHKD = totalFx * rateEff;
     const dutyPerBottle = o.duty ? hkDuty(hammer * rateEff / qty, o.litres) : 0;
     const duty = dutyPerBottle * qty;
-    const carry = o.dest === 'carry' ? qty * pos(o.carryFee) : 0;
+    const carry = o.dest === 'carry' ? qty * FEES.carryFee : 0;
     const totalHKD = fxHKD + duty + carry;
 
     return {

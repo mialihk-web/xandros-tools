@@ -391,13 +391,13 @@
 
   /* ---------- 每格設定 ---------- */
   // 買入一入網站預設寄往英國（Mia 2026-11-10）→ 酒稅、外國卡跟住唔剔
-  const DEFAULT_CARD = { dest: 'uk', carryFee: 500, duty: false, vat: true, card: false, insurance: false, account: 'hk', reserve: true, shipCur: 'hkd', buyerFixed: '3' };
+  const DEFAULT_CARD = { dest: 'uk', duty: false, vat: true, card: false, insurance: false, account: 'hk', reserve: true, shipCur: 'hkd', buyerFixed: '3' };
   const prefs = loadPrefs();
   const cards = {};
   // 送貨方式（同跟住佢嘅酒稅／外國卡）每次開都返預設，唔用上次記低嘅
   C.PLATFORMS.forEach(p => {
     cards[p] = Object.assign({}, DEFAULT_CARD, (prefs.cards || {})[p] || {},
-      { dest: DEFAULT_CARD.dest, duty: DEFAULT_CARD.duty, card: DEFAULT_CARD.card, carryFee: DEFAULT_CARD.carryFee });
+      { dest: DEFAULT_CARD.dest, duty: DEFAULT_CARD.duty, card: DEFAULT_CARD.card });
   });
   // Catawiki 賣出運費：每個帳戶各自一套（預設跟 FEES；改咗只喺今次開住頁面時記住）
   const catShip = {};
@@ -433,8 +433,7 @@
           </div>
           <div class="hint only-carry">先寄往英國，再由朋友帶回香港</div>
         </div>
-        <div class="field only-carry"><span class="lbl">朋友帶貨費用（每支）</span>
-          <div class="seg" data-k="carryFee"><button type="button" data-v="500">HK$500</button><button type="button" data-v="750">HK$750</button></div>
+        <div class="field only-carry"><span class="lbl">朋友帶貨費用：每支 HK$${f0(F.carryFee)}（固定）</span>
         </div>
         <label class="field only-bid"><span class="lbl">落槌價</span>
           <div class="money"><i>${sym}</i><input type="text" data-k="bid" inputmode="decimal" autocomplete="off" placeholder="0"></div></label>
@@ -553,7 +552,7 @@
     const st = cards[p];
     return {
       qty: $('#qty').value, shipping: val(el, 'buyShip'), rate: getRate(CUR[p]), buffer: getBuffer(),
-      dest: st.dest, duty: st.dest !== 'uk' && st.duty, carryFee: st.carryFee,
+      dest: st.dest, duty: st.dest !== 'uk' && st.duty,
       vat: st.vat, card: st.card, insurance: st.insurance, buyerFixed: st.buyerFixed, litres: $('#litres').value,
     };
   }
@@ -577,7 +576,7 @@
     out.push(L('小計', s + f2(r.totalFx), 'sub'));
     out.push(L(`× 匯率 ${r.rateEff.toFixed(4)}（已加 ${pctTxt(getBuffer())}）`, 'HK$' + f2(r.fxHKD)));
     if (r.duty) out.push(L(`香港烈酒稅（每支 HK$${f2(r.dutyPerBottle)} × ${r.qty}）`, 'HK$' + f2(r.duty)));
-    if (r.carry) out.push(L(`朋友帶貨（HK$${f0(o.carryFee)} × ${r.qty}）`, 'HK$' + f2(r.carry)));
+    if (r.carry) out.push(L(`朋友帶貨（HK$${f0(F.carryFee)} × ${r.qty}）`, 'HK$' + f2(r.carry)));
     out.push(L('全包成本', 'HK$' + f2(r.totalHKD), 'total'));
     return out.join('');
   }
@@ -738,7 +737,6 @@
     const p = btn.closest('.card').dataset.p;
     const k = btn.parentElement.dataset.k;
     let v = btn.dataset.v;
-    if (k === 'carryFee') v = Number(v);
     if (p === 'catawiki' && k === 'shipCur') catShip[cards.catawiki.account].cur = v;
     else cards[p][k] = v;
     if (k === 'dest') cards[p].duty = (v === 'hk'); // 寄香港自動剔；朋友帶預設唔剔
